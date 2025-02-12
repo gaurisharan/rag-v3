@@ -2,12 +2,11 @@ import os
 import tempfile
 import streamlit as st
 from pinecone import Pinecone
-from llama_index.core import VectorStoreIndex, ServiceContext
+from llama_index.core import VectorStoreIndex, Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.core.llms import Mistral
-from llama_index.core.readers import LlamaParseReader
+from llama_index.llms.mistral import Mistral
+from llama_index.readers.llamaparse import LlamaParseReader
 from llama_index.core.node_parser import SentenceSplitter
-from llama_index.core.query_engine import RetrieverQueryEngine
 
 # Initialize Pinecone connection
 pc = Pinecone(api_key=st.secrets.PINECONE_API_KEY)
@@ -21,6 +20,11 @@ embed_model = HuggingFaceEmbedding(
 
 # Initialize Mistral LLM
 llm = Mistral(api_key=st.secrets.MISTRAL_API_KEY, model="mistral-tiny")
+
+# Set default settings
+Settings.llm = llm
+Settings.embed_model = embed_model
+Settings.node_parser = SentenceSplitter(chunk_size=1024, chunk_overlap=20)
 
 # Document processing pipeline using LlamaParse
 def process_documents(uploaded_files):
@@ -39,25 +43,14 @@ def process_documents(uploaded_files):
     reader = LlamaParseReader(api_key=st.secrets.LLAMAPARSE_API_KEY)
     documents = reader.load_data(file_paths)
     
-    # Create service context
-    service_context = ServiceContext.from_defaults(
-        llm=llm,
-        embed_model=embed_model,
-        node_parser=SentenceSplitter(chunk_size=1024, chunk_overlap=20)
-    )
-    
     # Create and store index
     index = VectorStoreIndex.from_documents(
         documents,
-        service_context=service_context
+        embed_model=embed_model,
+        node_parser=Settings.node_parser
     )
     
     return index
-
-# Initialize query engine
-def init_query_engine(index):
-    retriever = index.as_retriever(similarity_top_k=3)
-    return RetrieverQueryEngine.from_args(retriever, service_context=index.service_context)
 
 # Streamlit UI setup
 st.set_page_config(page_title="RAG Chat with LlamaParse", layout="wide")
@@ -74,7 +67,10 @@ with st.sidebar:
     if st.button("Process Documents") and uploaded_files:
         with st.spinner("Processing documents..."):
             index = process_documents(uploaded_files)
-            st.session_state.query_engine = init_query_engine(index)
+            st.session_state.query_engine = index.as_query_engine(
+                similarity_top_k=3,
+                streaming=True
+            )
             st.success("Documents processed and indexed!")
 
 # Main chat interface
