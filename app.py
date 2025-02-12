@@ -3,7 +3,7 @@ import tempfile
 import streamlit as st
 from pinecone import Pinecone
 from llama_index.core import VectorStoreIndex, ServiceContext
-from llama_index.core.embeddings import HuggingFaceEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.llms import Mistral
 from llama_index.core.readers import LlamaParseReader
 from llama_index.core.node_parser import SentenceSplitter
