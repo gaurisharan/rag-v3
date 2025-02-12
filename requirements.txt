@@ -1,6 +1,6 @@
-streamlit>=1.32.0
-pinecone-client>=3.0.0
-llama-index>=0.9.0
-llama-parse>=0.1.0
-sentence-transformers>=2.2.2
+streamlit
+pinecone-client
+llama-index
+llama-parse
+sentence-transformers
 torch==2.2.1 --index-url https://download.pytorch.org/whl/cpu
